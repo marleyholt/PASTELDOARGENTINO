@@ -1,0 +1,6 @@
+{
+  "name": "Pastelaria Gestão & Pedidos",
+  "description": "Sistema completo de gestão de pedidos para pastelaria integrado ao WhatsApp, painel Kanban, KDS, entregador, finanças e configurações.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
