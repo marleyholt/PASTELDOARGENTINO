@@ -1,6 +1,6 @@
 {
-  "name": "Pastelaria Gestão & Pedidos",
-  "description": "Sistema completo de gestão de pedidos para pastelaria integrado ao WhatsApp, painel Kanban, KDS, entregador, finanças e configurações.",
+  "name": "Pastel do Argentino",
+  "description": "Sistema completo de gestão, cardápio digital, KDS para cozinha, mapa de calor e controle de delivery do Pastel do Argentino.",
   "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
