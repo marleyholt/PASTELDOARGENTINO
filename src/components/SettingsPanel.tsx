@@ -22,7 +22,9 @@ import {
   ExternalLink,
   Lock,
   KeyRound,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Pause,
+  Play
 } from 'lucide-react';
 import { StoreConfig, Category, Product, ProductExtra, DeliveryZone, UserAccount, RoleType, DeliveryDriver } from '../types';
 
@@ -309,6 +311,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleToggleProduct = (id: string) => {
     const updated = products.map(p => p.id === id ? { ...p, ativo: !p.ativo } : p);
+    onSaveProducts(updated);
+  };
+
+  const handleTogglePauseProduct = (id: string) => {
+    const updated = products.map(p => p.id === id ? { ...p, pausado: !p.pausado } : p);
     onSaveProducts(updated);
   };
 
@@ -1130,21 +1137,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                           {cat?.nome || 'Geral'}
                         </span>
                       </div>
-                      <div className="absolute top-2 right-2">
+                      <div className="absolute top-2 right-2 flex items-center gap-1">
+                        {prod.pausado && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-black bg-amber-500 text-stone-950 shadow-xs border border-amber-400">
+                            ⏸️ Pausado
+                          </span>
+                        )}
                         <button
                           onClick={() => handleToggleProduct(prod.id)}
                           className={`text-xs px-2.5 py-0.5 rounded-full font-bold shadow-xs transition-all ${
                             prod.ativo ? 'bg-emerald-500 text-white' : 'bg-stone-600 text-white'
                           }`}
                         >
-                          {prod.ativo ? 'Ativo' : 'Pausado'}
+                          {prod.ativo ? 'Ativo' : 'Desativado'}
                         </button>
                       </div>
+                      {prod.pausado && (
+                        <div className="absolute inset-0 bg-stone-950/60 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 text-center">
+                          <div className="bg-amber-500 text-stone-950 font-black text-xs px-3 py-1 rounded-full flex items-center gap-1.5 shadow-md">
+                            <Pause className="w-3.5 h-3.5 fill-stone-950" />
+                            <span>ITEM ESGOTADO / PAUSADO</span>
+                          </div>
+                          <span className="text-[10px] text-stone-200 mt-1 font-semibold">
+                            Retirado temporariamente do cardápio
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-4 flex-1 flex flex-col justify-between">
                       <div>
-                        <h3 className="font-bold text-stone-900 text-base leading-snug">{prod.nome}</h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-stone-900 text-base leading-snug">{prod.nome}</h3>
+                          {prod.pausado && (
+                            <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded-md border border-amber-200 shrink-0">
+                              Pausado
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-stone-500 line-clamp-2 mt-1">{prod.descricao}</p>
                       </div>
 
@@ -1153,6 +1183,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                           R$ {prod.preco.toFixed(2)}
                         </span>
                         <div className="flex items-center gap-1">
+                          {/* Ícone de Pausa / Retomada do Item ao lado do lápis */}
+                          <button
+                            id={`btn-toggle-pause-${prod.id}`}
+                            type="button"
+                            onClick={() => handleTogglePauseProduct(prod.id)}
+                            className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
+                              prod.pausado 
+                                ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300' 
+                                : 'text-stone-600 hover:text-amber-700 hover:bg-amber-50'
+                            }`}
+                            title={prod.pausado ? "Item pausado/esgotado - Clique para reativar no cardápio" : "Pausar item temporariamente (Acabou o ingrediente)"}
+                          >
+                            {prod.pausado ? (
+                              <Play className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+                            ) : (
+                              <Pause className="w-4 h-4 text-amber-600 fill-amber-600" />
+                            )}
+                          </button>
+
                           <button
                             type="button"
                             onClick={() => handleOpenEditProduct(prod)}

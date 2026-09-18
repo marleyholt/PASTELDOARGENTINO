@@ -37,6 +37,7 @@ export interface Product {
   ativo: boolean;
   destaque?: boolean;
   adicionaisPermitidos?: string[]; // IDs de adicionais
+  pausado?: boolean; // Se true, o item está pausado temporariamente (esgotado)
 }
 
 export interface Category {

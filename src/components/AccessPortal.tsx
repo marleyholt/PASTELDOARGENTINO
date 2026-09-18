@@ -12,7 +12,8 @@ import {
   AlertCircle,
   KeyRound,
   CheckCircle2,
-  Lock
+  Lock,
+  BookOpen
 } from 'lucide-react';
 import { StoreConfig, DeliveryDriver, UserSession } from '../types';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
@@ -22,12 +23,14 @@ interface AccessPortalProps {
   config: StoreConfig;
   drivers: DeliveryDriver[];
   onSelectProfile: (session: UserSession, targetView?: 'menu' | 'tracker' | 'delivery' | 'kitchen' | 'kanban') => void;
+  onOpenManual?: () => void;
 }
 
 export const AccessPortal: React.FC<AccessPortalProps> = ({
   config,
   drivers,
   onSelectProfile,
+  onOpenManual,
 }) => {
   // Modal do Motoboy
   const [showDriverModal, setShowDriverModal] = useState(false);
@@ -158,16 +161,34 @@ export const AccessPortal: React.FC<AccessPortalProps> = ({
       <section className="min-h-screen flex flex-col justify-between p-4 sm:p-8 max-w-4xl mx-auto w-full">
         
         {/* Topo do Portal */}
-        <header className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-900 px-3.5 py-1.5 rounded-full text-xs font-bold">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span>Pastelaria Aberta • Fritura na Hora</span>
+        <header className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-900 px-3.5 py-1.5 rounded-full text-xs font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <span>Pastelaria Aberta • Fritura na Hora</span>
+            </div>
+
+            <div className="hidden sm:flex text-xs text-stone-500 items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
+              <span>{config.horarioFuncionamento}</span>
+            </div>
           </div>
 
-          <div className="text-xs text-stone-500 flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
-            <span>{config.horarioFuncionamento}</span>
-          </div>
+          {/* Botão Manual do Usuário */}
+          {onOpenManual && (
+            <div className="flex items-center gap-2">
+              <button
+                id="btn-manual-portal"
+                type="button"
+                onClick={() => onOpenManual()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-950 font-bold text-xs border border-amber-500/40 transition-all shadow-xs"
+                title="Acessar o passo a passo da operação"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                <span>Manual do Usuário</span>
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Bloco Central do Cliente */}
@@ -342,6 +363,36 @@ export const AccessPortal: React.FC<AccessPortalProps> = ({
             </div>
 
           </div>
+
+          {/* Banner do Manual de Operação na Área da Equipe */}
+          {onOpenManual && (
+            <div className="mt-8 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/20 to-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-left">
+                <div className="p-2.5 rounded-xl bg-amber-500 text-stone-950">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-white">
+                    Manual de Operação Passo a Passo
+                  </h4>
+                  <p className="text-xs text-stone-300">
+                    Guia prático para a equipe de atendimento, caixa, cozinha e entregadores.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => onOpenManual()}
+                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-all shadow-md text-center flex items-center justify-center gap-1.5"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Abrir Manual Operacional</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-12 text-center text-xs text-stone-500 border-t border-stone-800 pt-6">
             © {new Date().getFullYear()} {config.nome} • Sistema de Gestão e Delivery

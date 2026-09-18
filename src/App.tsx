@@ -16,7 +16,9 @@ import {
   ShieldCheck, 
   Sparkles,
   Wifi,
-  WifiOff
+  WifiOff,
+  BookOpen,
+  Presentation
 } from 'lucide-react';
 
 import { 
@@ -57,6 +59,7 @@ import { FinancialModule } from './components/FinancialModule';
 import { AdvancedReports } from './components/AdvancedReports';
 import { OrderTracker } from './components/OrderTracker';
 import { OrderAlertToast, OrderNotification } from './components/OrderAlertToast';
+import { UserManualModal } from './components/UserManualModal';
 
 import { 
   subscribeToOrders, 
@@ -94,6 +97,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState<MainView>('menu');
   const [selectedTrackingOrderId, setSelectedTrackingOrderId] = useState<string | null>(null);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
+
+  // Modal do Manual do Usuário Passo a Passo
+  const [isUserManualOpen, setIsUserManualOpen] = useState(false);
 
   // Estados centrais com cache inteligente para economizar requisições do Firebase
   const [config, setConfig] = useState<StoreConfig>(() => {
@@ -538,11 +544,22 @@ export default function App() {
   // Se o usuário ainda não escolheu um perfil, exibe a tela de abertura inicial (AccessPortal)
   if (!currentSession) {
     return (
-      <AccessPortal 
-        config={config} 
-        drivers={drivers} 
-        onSelectProfile={handleSelectProfile} 
-      />
+      <>
+        <AccessPortal 
+          config={config} 
+          drivers={drivers} 
+          onSelectProfile={handleSelectProfile} 
+          onOpenManual={() => {
+            setIsUserManualOpen(true);
+          }}
+        />
+
+        {/* Modal do Manual do Usuário Passo a Passo */}
+        <UserManualModal
+          isOpen={isUserManualOpen}
+          onClose={() => setIsUserManualOpen(false)}
+        />
+      </>
     );
   }
 
@@ -579,8 +596,103 @@ export default function App() {
           </div>
         </div>
 
-        {/* Lado Direito: Badge do Perfil Ativo e Botão Sair/Trocar */}
+        {/* Centro: Atalhos Rápidos da Visão do Administrador (Kanban, Cozinha, Entregador) */}
+        {currentSession.perfil === 'admin' && (
+          <div className="flex items-center gap-1 sm:gap-2 bg-stone-950/80 p-1 rounded-xl border border-stone-800 shadow-inner">
+            {/* Atalho 1: Pipeline Kanban */}
+            <button
+              id="header-shortcut-kanban"
+              type="button"
+              onClick={() => setCurrentView('kanban')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                currentView === 'kanban'
+                  ? 'bg-amber-500 text-stone-950 shadow-xs'
+                  : 'text-stone-300 hover:text-white hover:bg-stone-800'
+              }`}
+              title="Ir para o Pipeline Kanban"
+            >
+              <Kanban className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Kanban</span>
+              {orders.filter(o => o.status !== 'entregue' && o.status !== 'cancelado').length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  currentView === 'kanban'
+                    ? 'bg-stone-950 text-amber-400'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {orders.filter(o => o.status !== 'entregue' && o.status !== 'cancelado').length}
+                </span>
+              )}
+            </button>
+
+            {/* Atalho 2: Cozinha (KDS) */}
+            <button
+              id="header-shortcut-kitchen"
+              type="button"
+              onClick={() => setCurrentView('kitchen')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                currentView === 'kitchen'
+                  ? 'bg-orange-500 text-white shadow-xs'
+                  : 'text-stone-300 hover:text-white hover:bg-stone-800'
+              }`}
+              title="Ir para a Cozinha (KDS)"
+            >
+              <ChefHat className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Cozinha</span>
+              {orders.filter(o => o.status === 'preparando' || o.status === 'novo').length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  currentView === 'kitchen'
+                    ? 'bg-stone-950 text-orange-300'
+                    : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                }`}>
+                  {orders.filter(o => o.status === 'preparando' || o.status === 'novo').length}
+                </span>
+              )}
+            </button>
+
+            {/* Atalho 3: Entregador (GPS) */}
+            <button
+              id="header-shortcut-delivery"
+              type="button"
+              onClick={() => setCurrentView('delivery')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                currentView === 'delivery'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-stone-300 hover:text-white hover:bg-stone-800'
+              }`}
+              title="Ir para o Módulo do Entregador (GPS)"
+            >
+              <Truck className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Entregador</span>
+              {orders.filter(o => o.tipoEntrega === 'delivery' && (o.status === 'pronto' || o.status === 'em_entrega')).length > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  currentView === 'delivery'
+                    ? 'bg-stone-950 text-blue-300'
+                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                }`}>
+                  {orders.filter(o => o.tipoEntrega === 'delivery' && (o.status === 'pronto' || o.status === 'em_entrega')).length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Lado Direito: Botão do Manual, Badge do Perfil e Trocar Perfil */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Botão de Acesso ao Manual do Usuário */}
+          <button
+            id="btn-manual-usuario-header"
+            type="button"
+            onClick={() => {
+              setIsUserManualOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-black transition-all shadow-xs"
+            title="Abrir o Manual do Usuário"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-stone-950" />
+            <span className="hidden lg:inline">Manual do Usuário</span>
+            <span className="lg:hidden">Manual</span>
+          </button>
+
           {/* Identificador do Perfil Logado */}
           <div className="flex items-center gap-1.5 bg-stone-800 border border-stone-700 px-2.5 py-1 rounded-lg text-xs font-bold">
             {currentSession.perfil === 'cliente' && (
@@ -707,8 +819,23 @@ export default function App() {
             </nav>
 
             {/* Rodapé do Menu Drawer */}
-            <div className="p-4 border-t border-stone-800 text-[11px] text-stone-400 bg-stone-950/50 space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="p-3 border-t border-stone-800 text-[11px] text-stone-400 bg-stone-950/70 space-y-2">
+              {/* Atalho para o Manual de Operação */}
+              <div className="pb-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNavDrawerOpen(false);
+                    setIsUserManualOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs py-2 px-3 rounded-xl transition-all shadow-xs"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Manual de Operação Passo a Passo</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-stone-800/80">
                 <span className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Firebase Conectado
@@ -859,6 +986,12 @@ export default function App() {
       <OrderAlertToast
         notification={activeNotification}
         onDismiss={() => setActiveNotification(null)}
+      />
+
+      {/* Modal do Manual do Usuário Passo a Passo */}
+      <UserManualModal
+        isOpen={isUserManualOpen}
+        onClose={() => setIsUserManualOpen(false)}
       />
     </div>
   );

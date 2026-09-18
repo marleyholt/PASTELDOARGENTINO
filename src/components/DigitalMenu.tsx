@@ -61,9 +61,11 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
   const [addedToast, setAddedToast] = useState<string | null>(null);
 
   const activeCategories = categories.filter(c => c.ativo);
-  const activeProducts = products.filter(p => p.ativo && (selectedCategory === 'all' || p.categoriaId === selectedCategory));
+  // Itens pausados (esgotados) são retirados temporariamente do cardápio do cliente
+  const activeProducts = products.filter(p => p.ativo && !p.pausado && (selectedCategory === 'all' || p.categoriaId === selectedCategory));
 
   const openCustomizer = (product: Product) => {
+    if (product.pausado) return;
     setCustomizingProduct(product);
     setSelectedExtras([]);
     setItemNote('');
