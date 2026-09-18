@@ -25,7 +25,9 @@ const firebaseConfig = {
 
 // Inicialização segura
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app, firebaseConfigJson.firestoreDatabaseId || undefined);
+export const db = (firebaseConfigJson as any).firestoreDatabaseId 
+  ? getFirestore(app, (firebaseConfigJson as any).firestoreDatabaseId) 
+  : getFirestore(app);
 export const auth = getAuth(app);
 
 // Teste de conexão obrigatório pelo Firebase skill
@@ -92,6 +94,26 @@ export async function updateOrderStatusInFirestore(
     await setDoc(docRef, payload, { merge: true });
   } catch (err) {
     console.error('[Firebase] Erro ao atualizar status:', err);
+  }
+}
+
+export async function updateOrderPriorityInFirestore(
+  orderId: string,
+  prioridadeEntrega: number,
+  observacaoEntrega?: string
+): Promise<void> {
+  try {
+    const docRef = doc(db, 'pedidos', orderId);
+    const payload: any = { 
+      prioridadeEntrega, 
+      atualizadoEm: new Date().toISOString() 
+    };
+    if (observacaoEntrega !== undefined) {
+      payload.observacaoEntrega = observacaoEntrega;
+    }
+    await setDoc(docRef, payload, { merge: true });
+  } catch (err) {
+    console.error('[Firebase] Erro ao atualizar prioridade:', err);
   }
 }
 

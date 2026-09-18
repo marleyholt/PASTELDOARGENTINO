@@ -33,6 +33,7 @@ Aguarde a confirmação da pastelaria!`,
   tempoEntregaPadraoMin: 45,
   permiteRetirada: true,
   permiteEntrega: true,
+  senhaCozinha: "1234",
 };
 
 export const initialCategories: Category[] = [
@@ -146,6 +147,8 @@ export const initialDrivers: DeliveryDriver[] = [
     ativo: true,
     emServico: true,
     observacoes: 'Turno da noite (18h às 23h30)',
+    codigoRegistro: '1',
+    senha: '123',
   },
   {
     id: 'drv-2',
@@ -159,6 +162,8 @@ export const initialDrivers: DeliveryDriver[] = [
     ativo: true,
     emServico: true,
     observacoes: 'Entregas rápidas e finais de semana',
+    codigoRegistro: '2',
+    senha: '123',
   },
   {
     id: 'drv-3',
@@ -172,6 +177,8 @@ export const initialDrivers: DeliveryDriver[] = [
     ativo: true,
     emServico: false,
     observacoes: 'Atende pedidos em um raio de até 2.5km (Centro)',
+    codigoRegistro: '3',
+    senha: '123',
   },
 ];
 

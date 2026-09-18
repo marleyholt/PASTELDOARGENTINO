@@ -66,6 +66,8 @@ export interface DeliveryDriver {
   ativo: boolean; // Se está cadastrado e ativo
   emServico: boolean; // Se está online no turno atual
   observacoes?: string;
+  codigoRegistro?: string; // Número de registro do motoboy (ex: 1, 2, 101)
+  senha?: string; // Senha de acesso individual do entregador
 }
 
 export interface StoreConfig {
@@ -85,6 +87,10 @@ export interface StoreConfig {
   tempoEntregaPadraoMin: number;
   permiteRetirada: boolean;
   permiteEntrega: boolean;
+  senhaCozinha?: string; // Senha do módulo da cozinha (KDS)
+  webhookWhatsappUrl?: string;
+  webhookWhatsappToken?: string;
+  webhookWhatsappAtivo?: boolean;
 }
 
 export type OrderStatus = 
@@ -143,7 +149,23 @@ export interface Order {
   atualizadoEm: string;
   entregadorId?: string;
   entregadorNome?: string;
+  prioridadeEntrega?: number; // 1 = primeira entrega, 2 = segunda, etc.
+  observacaoEntrega?: string; // Observação específica definida pelo administrador para o motoboy
+  ordemRotaSugerida?: number; // Sugestão gerada pela inteligência de rota
 }
+
+export type AppProfile = 'portal' | 'cliente' | 'motoboy' | 'cozinha' | 'admin';
+
+export interface UserSession {
+  perfil: AppProfile;
+  nome?: string;
+  driverId?: string;
+  driverName?: string;
+  driverRegistro?: string;
+  adminEmail?: string;
+}
+
+export type Driver = DeliveryDriver;
 
 export interface FinancialTransaction {
   id: string;

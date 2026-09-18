@@ -19,7 +19,10 @@ import {
   Bike,
   Phone,
   Power,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  KeyRound,
+  Image as ImageIcon
 } from 'lucide-react';
 import { StoreConfig, Category, Product, ProductExtra, DeliveryZone, UserAccount, RoleType, DeliveryDriver } from '../types';
 
@@ -73,7 +76,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [driverPixType, setDriverPixType] = useState<'cpf' | 'telefone' | 'email' | 'aleatoria'>('telefone');
   const [driverFee, setDriverFee] = useState('6.00');
   const [driverNotes, setDriverNotes] = useState('');
+  const [driverRegister, setDriverRegister] = useState('');
+  const [driverPassword, setDriverPassword] = useState('');
   const [showDriverForm, setShowDriverForm] = useState(false);
+  const [webhookTesting, setWebhookTesting] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Upload do logotipo da pastelaria
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+
+  // Senha do Módulo Cozinha (KDS)
+  const [kitchenPassword, setKitchenPassword] = useState(config.senhaCozinha || '1234');
+  const [savedKitchenPasswordSuccess, setSavedKitchenPasswordSuccess] = useState(false);
 
   const [catList, setCatList] = useState<Category[]>([...categories]);
   const [newCatName, setNewCatName] = useState('');
@@ -106,6 +120,34 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     onSaveConfig(formData);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  // Upload do arquivo do logotipo
+  const handleLogoFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, SVG, WebP).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setFormData(prev => ({ ...prev, logotipoUrl: result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Salvar senha específica do módulo de cozinha na aba de usuários/níveis de acesso
+  const handleSaveKitchenPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kitchenPassword.trim()) {
+      alert('Por favor, informe uma senha válida para o módulo da cozinha.');
+      return;
+    }
+    const updated = { ...formData, senhaCozinha: kitchenPassword.trim() };
+    setFormData(updated);
+    onSaveConfig(updated);
+    setSavedKitchenPasswordSuccess(true);
+    setTimeout(() => setSavedKitchenPasswordSuccess(false), 3000);
   };
 
   // Gestão de Categorias
@@ -341,6 +383,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               tipoChavePix: driverPixType,
               taxaEntregaFixa: parseFloat(driverFee) || 0,
               observacoes: driverNotes.trim(),
+              codigoRegistro: driverRegister.trim(),
+              senha: driverPassword.trim() || d.senha || '123',
             }
           : d
       );
@@ -359,6 +403,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         ativo: true,
         emServico: true,
         observacoes: driverNotes.trim(),
+        codigoRegistro: driverRegister.trim() || (driverList.length + 1).toString(),
+        senha: driverPassword.trim() || '123',
       };
       const updated = [...driverList, newDriver];
       setDriverList(updated);
@@ -373,6 +419,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     setDriverPix('');
     setDriverFee('6.00');
     setDriverNotes('');
+    setDriverRegister('');
+    setDriverPassword('');
     setShowDriverForm(false);
   };
 
@@ -386,6 +434,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     setDriverPixType(driver.tipoChavePix || 'telefone');
     setDriverFee(driver.taxaEntregaFixa?.toString() || '6.00');
     setDriverNotes(driver.observacoes || '');
+    setDriverRegister(driver.codigoRegistro || '');
+    setDriverPassword(driver.senha || '');
     setShowDriverForm(true);
   };
 
@@ -513,17 +563,102 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1">
-                URL do Logotipo / Imagem
-              </label>
-              <input
-                id="input-store-logo"
-                type="url"
-                value={formData.logotipoUrl}
-                onChange={(e) => setFormData({ ...formData, logotipoUrl: e.target.value })}
-                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
-              />
+            <div className="md:col-span-2 bg-stone-50 border border-stone-200 rounded-2xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 pb-3">
+                <div>
+                  <label className="text-sm font-bold text-stone-900 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-amber-600" />
+                    Logotipo Oficial da Pastelaria
+                  </label>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    Envie a imagem do seu negócio por upload do computador ou cole uma URL direta.
+                  </p>
+                </div>
+                {formData.logotipoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, logotipoUrl: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=200&h=200&fit=crop' })}
+                    className="text-xs text-stone-500 hover:text-stone-800 underline self-start sm:self-auto"
+                  >
+                    Restaurar Logo Padrão
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                {/* Preview Redondo/Quadrado com sombra */}
+                <div className="relative shrink-0">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden border-4 border-white shadow-lg ring-2 ring-amber-300 bg-amber-100 flex items-center justify-center">
+                    {formData.logotipoUrl ? (
+                      <img
+                        src={formData.logotipoUrl}
+                        alt="Logotipo da Pastelaria"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-4xl">🥟</span>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 bg-amber-500 text-stone-950 p-1.5 rounded-xl shadow-md text-xs font-bold">
+                    Logo
+                  </div>
+                </div>
+
+                {/* Zona de Upload e Drag-and-Drop */}
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
+                  onDragLeave={() => setIsDraggingLogo(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDraggingLogo(false);
+                    if (e.dataTransfer.files?.[0]) {
+                      handleLogoFileSelect(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={`flex-1 w-full border-2 border-dashed rounded-xl p-4 text-center transition-all ${
+                    isDraggingLogo 
+                      ? 'border-amber-500 bg-amber-50' 
+                      : 'border-stone-300 hover:border-amber-400 bg-white'
+                  }`}
+                >
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Upload className="w-6 h-6 text-amber-600" />
+                    <div className="text-xs text-stone-600 font-medium">
+                      <span>Arraste e solte o arquivo da logo aqui ou</span>
+                    </div>
+
+                    <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-black px-4 py-2 rounded-xl shadow-xs transition-colors flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Selecionar Imagem do Computador</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            handleLogoFileSelect(e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
+                    <span className="text-[11px] text-stone-400">PNG, JPG, SVG ou WebP (Recomendado 300x300px)</span>
+                  </div>
+
+                  {/* Campo Alternativo para URL */}
+                  <div className="mt-3 pt-3 border-t border-stone-100 flex items-center gap-2">
+                    <span className="text-[11px] text-stone-400 font-semibold shrink-0">Ou URL:</span>
+                    <input
+                      id="input-store-logo"
+                      type="url"
+                      placeholder="https://sua-imagem.com/logo.png"
+                      value={formData.logotipoUrl}
+                      onChange={(e) => setFormData({ ...formData, logotipoUrl: e.target.value })}
+                      className="w-full px-2.5 py-1.5 border border-stone-200 rounded-lg text-xs bg-stone-50 focus:bg-white focus:ring-1 focus:ring-amber-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -679,6 +814,132 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   .replace('{total}', '44.00')
                   .replace('{pagamento}', 'PIX (Comprovante em anexo)')
                   .replace('{observacoes}', 'Obs: Massa bem frita!')}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 2: Webhook de Disparo Automático para o WhatsApp da Loja */}
+          <div className="border-t border-stone-200 pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-black text-stone-900 flex items-center gap-2">
+                  <span className="text-emerald-600">⚡</span>
+                  Webhook de Notificação Automática (Disparo em Tempo Real)
+                </h3>
+                <p className="text-xs text-stone-500">
+                  Dispara uma requisição HTTP POST para sua API de WhatsApp (n8n, Evolution API, Baileys, Zapier, Make) sempre que um novo pedido for feito.
+                </p>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!formData.webhookWhatsappAtivo}
+                  onChange={(e) => setFormData({ ...formData, webhookWhatsappAtivo: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                <span className="ml-2 text-xs font-bold text-stone-700">
+                  {formData.webhookWhatsappAtivo ? 'Webhook Ativo' : 'Desativado'}
+                </span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-stone-50 p-4 rounded-xl border border-stone-200">
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1">
+                  URL do Webhook (Endpoint POST)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://sua-api.com/webhook/whatsapp/novo-pedido"
+                  value={formData.webhookWhatsappUrl || ''}
+                  onChange={(e) => setFormData({ ...formData, webhookWhatsappUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs font-mono bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1">
+                  Token de Autorização / API Key (Opcional)
+                </label>
+                <input
+                  type="password"
+                  placeholder="Bearer token ou chave secreta"
+                  value={formData.webhookWhatsappToken || ''}
+                  onChange={(e) => setFormData({ ...formData, webhookWhatsappToken: e.target.value })}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-xs font-mono bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="md:col-span-2 flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!formData.webhookWhatsappUrl) {
+                      alert('Informe a URL do Webhook primeiro!');
+                      return;
+                    }
+                    setWebhookTesting(true);
+                    setWebhookTestResult(null);
+
+                    try {
+                      const payload = {
+                        evento: 'teste_webhook',
+                        loja: formData.nome,
+                        mensagem: '🥟 Teste de envio de webhook do sistema de gestão da pastelaria.',
+                        data: new Date().toISOString(),
+                      };
+
+                      const headers: Record<string, string> = {
+                        'Content-Type': 'application/json',
+                      };
+                      if (formData.webhookWhatsappToken) {
+                        headers['Authorization'] = `Bearer ${formData.webhookWhatsappToken}`;
+                        headers['x-api-key'] = formData.webhookWhatsappToken;
+                      }
+
+                      const res = await fetch(formData.webhookWhatsappUrl, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(payload),
+                      });
+
+                      if (res.ok) {
+                        setWebhookTestResult({
+                          success: true,
+                          message: `Sucesso! Servidor de Webhook respondeu com HTTP ${res.status}. Disparos automáticos estão prontos para funcionar.`,
+                        });
+                      } else {
+                        setWebhookTestResult({
+                          success: false,
+                          message: `Falha: Servidor de Webhook respondeu com status de erro HTTP ${res.status}.`,
+                        });
+                      }
+                    } catch (err: any) {
+                      setWebhookTestResult({
+                        success: false,
+                        message: `Tentativa enviada para a URL: ${err?.message || 'Erro de conexão/CORS'}. Verifique se seu servidor aceita requisições cross-origin ou configure seu gateway n8n/Zapier.`,
+                      });
+                    } finally {
+                      setWebhookTesting(false);
+                    }
+                  }}
+                  disabled={webhookTesting || !formData.webhookWhatsappUrl}
+                  className="w-full sm:w-auto px-4 py-2 bg-stone-800 hover:bg-stone-900 text-stone-100 rounded-lg text-xs font-bold disabled:opacity-40 transition-colors shadow-xs"
+                >
+                  {webhookTesting ? 'Disparando Teste...' : '⚡ Testar Disparo do Webhook'}
+                </button>
+
+                {webhookTestResult && (
+                  <div className={`text-xs p-2.5 rounded-lg flex-1 ${
+                    webhookTestResult.success 
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}>
+                    {webhookTestResult.message}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1429,6 +1690,39 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
 
                 <div>
+                  <label className="block text-xs font-bold text-amber-900 mb-1">
+                    Nº de Registro / ID de Identificação *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: 1, 2, 101"
+                    value={driverRegister}
+                    onChange={(e) => setDriverRegister(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-sm bg-amber-50/50 font-mono font-bold text-stone-900"
+                  />
+                  <span className="text-[10px] text-stone-500">Número único que o motoboy digita.</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                    Senha de Acesso do Motoboy *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: 1234"
+                    value={driverPassword}
+                    onChange={(e) => setDriverPassword(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-amber-400 rounded-lg text-sm bg-amber-50/50 font-mono font-bold text-stone-900"
+                  />
+                  <span className="text-[10px] text-stone-500">Senha pessoal para login no portal.</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
                     Telefone / WhatsApp *
                   </label>
@@ -1579,6 +1873,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                           <div className="font-bold text-stone-900 text-sm flex items-center gap-1.5">
                             <span className={`w-2.5 h-2.5 rounded-full ${driver.emServico ? 'bg-emerald-500' : 'bg-stone-300'}`} />
                             {driver.nome}
+                            <span className="bg-amber-100 text-amber-900 text-[10px] font-mono font-black px-1.5 py-0.5 rounded border border-amber-300">
+                              Chave: {driver.codigoRegistro || driver.id.replace('drv-', '')}
+                            </span>
+                            <span className="bg-stone-100 text-stone-700 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-stone-300 flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5 text-stone-500" />
+                              Senha: {driver.senha || '123'}
+                            </span>
                           </div>
                           <div className="text-xs text-stone-500 flex items-center gap-2 mt-0.5">
                             <span>{driver.telefone}</span>
@@ -1696,6 +1997,54 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <p className="text-sm text-stone-500">
               Defina o que cada funcionário (Cozinha, Entregador, Caixa ou Gerente) pode visualizar ou alterar no sistema.
             </p>
+          </div>
+
+          {/* Configuração da Senha do Módulo da Cozinha (KDS) */}
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-500 text-stone-950 rounded-xl shadow-xs">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-amber-950">
+                      Senha de Segurança do Módulo da Cozinha (KDS)
+                    </h3>
+                    <p className="text-xs text-amber-800">
+                      Esta é a senha exigida no portal inicial quando a equipe clicar no botão "Cozinha".
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveKitchenPassword} className="flex items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={kitchenPassword}
+                    onChange={(e) => setKitchenPassword(e.target.value)}
+                    placeholder="Ex: 1234"
+                    className="w-36 px-3 py-2 border-2 border-amber-400 rounded-xl text-sm font-mono font-black text-stone-900 bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-xs"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-xs transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Salvar Senha
+                </button>
+              </form>
+            </div>
+
+            {savedKitchenPasswordSuccess && (
+              <div className="mt-3 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 animate-fade-in">
+                <Check className="w-4 h-4 text-emerald-600" />
+                Senha do módulo da cozinha atualizada com sucesso!
+              </div>
+            )}
           </div>
 
           {/* Adicionar Usuário */}
