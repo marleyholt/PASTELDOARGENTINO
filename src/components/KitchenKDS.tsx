@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { ChefHat, Clock, AlertTriangle, Check, Bell } from 'lucide-react';
 import { Order } from '../types';
+import { OrderSyncIndicator } from './OrderSyncIndicator';
 
 interface KitchenKDSProps {
   orders: Order[];
   onSetReady: (orderId: string) => void;
+  secondsRemaining?: number;
+  isChecking?: boolean;
+  onForceCheck?: () => void;
 }
 
-export const KitchenKDS: React.FC<KitchenKDSProps> = ({ orders, onSetReady }) => {
+export const KitchenKDS: React.FC<KitchenKDSProps> = ({ 
+  orders, 
+  onSetReady,
+  secondsRemaining = 15,
+  isChecking = false,
+  onForceCheck = () => {},
+}) => {
   // Filtrar apenas os pedidos que estão em produção ou novos
   const kitchenOrders = orders.filter(o => o.status === 'preparando' || o.status === 'novo');
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
@@ -18,7 +28,7 @@ export const KitchenKDS: React.FC<KitchenKDSProps> = ({ orders, onSetReady }) =>
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 bg-stone-900 text-white p-4 rounded-2xl shadow-md">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 bg-stone-900 text-white p-4 rounded-2xl shadow-md border border-stone-800">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-amber-500 text-stone-950 rounded-xl">
             <ChefHat className="w-8 h-8" />
@@ -28,12 +38,20 @@ export const KitchenKDS: React.FC<KitchenKDSProps> = ({ orders, onSetReady }) =>
               KDS - Display de Produção da Cozinha
             </h1>
             <p className="text-xs text-stone-400">
-              Tela otimizada para operadores de fritadeira e montagem. Destaque para restrições e adicionais.
+              Tela com atualização automática a cada 15s para novos pedidos e despachos.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Indicador de 15 segundos da cozinha */}
+          <OrderSyncIndicator
+            secondsRemaining={secondsRemaining}
+            isChecking={isChecking}
+            onForceCheck={onForceCheck}
+            variant="dark"
+          />
+
           <div className="bg-stone-800 px-3 py-1.5 rounded-xl text-xs font-mono font-bold text-amber-400 border border-stone-700">
             {kitchenOrders.length} PEDIDOS EM FILA
           </div>

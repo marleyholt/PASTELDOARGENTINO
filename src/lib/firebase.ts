@@ -8,7 +8,8 @@ import {
   setDoc, 
   deleteDoc,
   query,
-  orderBy
+  orderBy,
+  getDocs
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import type { Order, Product, Category, Driver, FinancialTransaction, OrderStatus } from '../types';
@@ -71,6 +72,19 @@ export function subscribeToOrders(
       onError?.(err);
     }
   );
+}
+
+// Busca direta de pedidos no Firestore para ciclo de polling de 15 segundos
+export async function fetchOrdersDirectly(): Promise<Order[]> {
+  try {
+    const q = query(collection(db, 'pedidos'), orderBy('criadoEm', 'desc'));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+  } catch (err) {
+    console.warn('[Firebase] Erro na checagem direta de pedidos (15s):', err);
+    return [];
+  }
 }
 
 export async function saveOrderToFirestore(order: Order): Promise<void> {

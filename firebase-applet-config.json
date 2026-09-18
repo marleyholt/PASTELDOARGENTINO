@@ -1,12 +1,12 @@
 {
-  "projectId": "finlhub",
-  "appId": "1:80100152503:web:d69e5f7492038ba4e0a932",
-  "apiKey": "AIzaSyAWsiRWFynuzmmVWtijPPugnZiA27Kus5I",
-  "authDomain": "finlhub.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-pastelariagestop-046fe2b2-a564-4293-bc3d-cbbac7b8116d",
-  "storageBucket": "finlhub.firebasestorage.app",
-  "messagingSenderId": "80100152503",
+  "projectId": "pasteldoargentino-9f453",
+  "appId": "1:848720683953:web:61e931522d7bf0060ad390",
+  "apiKey": "AIzaSyC7lP_tYAUqCxMe5XBAoXiu-Ud67nK5l6w",
+  "authDomain": "pasteldoargentino-9f453.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-pasteldoargentin-046fe2b2-a564-4293-bc3d-cbbac7b8116d",
+  "storageBucket": "pasteldoargentino-9f453.firebasestorage.app",
+  "messagingSenderId": "848720683953",
   "measurementId": "",
-  "oAuthClientId": "80100152503-o4al8geedo0jhm8hfjq5h36it3e3muve.apps.googleusercontent.com",
+  "oAuthClientId": "848720683953-inu3rlq51jivgnpag6londqna23lkpq2.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

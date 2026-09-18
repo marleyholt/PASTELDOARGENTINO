@@ -56,6 +56,7 @@ import { DeliveryModule } from './components/DeliveryModule';
 import { FinancialModule } from './components/FinancialModule';
 import { AdvancedReports } from './components/AdvancedReports';
 import { OrderTracker } from './components/OrderTracker';
+import { OrderAlertToast, OrderNotification } from './components/OrderAlertToast';
 
 import { 
   subscribeToOrders, 
@@ -65,11 +66,14 @@ import {
   saveTransactionToFirestore, 
   subscribeToProducts, 
   subscribeToDrivers, 
-  subscribeToTransactions 
+  subscribeToTransactions,
+  fetchOrdersDirectly
 } from './lib/firebase';
 
 import { localCache } from './lib/cache';
 import { dispatchOrderWebhook } from './lib/webhook';
+import { compareOrders } from './lib/orderMonitor';
+import { soundAlert } from './lib/soundAlert';
 
 type MainView = 
   | 'settings' 
@@ -143,11 +147,102 @@ export default function App() {
 
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(true);
 
+  // Estados do ciclo de checagem a cada 15 segundos
+  const [secondsToNextCheck, setSecondsToNextCheck] = useState<number>(15);
+  const [isCheckingOrders, setIsCheckingOrders] = useState<boolean>(false);
+  const [activeNotification, setActiveNotification] = useState<OrderNotification | null>(null);
+
+  // Referência atualizada dos pedidos para comparação precisa
+  const ordersRef = React.useRef<Order[]>(orders);
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  // Função central de checagem a cada 15 segundos
+  const runOrderCheck = async () => {
+    if (isCheckingOrders) return;
+    setIsCheckingOrders(true);
+
+    try {
+      const cloudOrders = await fetchOrdersDirectly();
+      if (cloudOrders && cloudOrders.length > 0) {
+        const diff = compareOrders(ordersRef.current, cloudOrders);
+
+        if (diff.hasChanges) {
+          // Atualiza os pedidos no estado (Kanban e Cozinha atualizam automaticamente!)
+          setOrders(cloudOrders);
+          localCache.set('pastel_orders', cloudOrders);
+          ordersRef.current = cloudOrders;
+
+          // 1. Entrou um novo pedido
+          if (diff.newOrders.length > 0) {
+            soundAlert.playNewOrderSound();
+            const seqs = diff.newOrders.map(o => `#${o.numeroSequencial}`).join(', ');
+            const first = diff.newOrders[0];
+            setActiveNotification({
+              id: `notif-${Date.now()}`,
+              type: 'new',
+              title: `🔔 Novo Pedido Recebido! (${seqs})`,
+              description: `Cliente: ${first.clienteNome} • Valor: R$ ${first.valorTotal.toFixed(2)} (${first.formaPagamento}). Atualizado na Cozinha e no Kanban.`,
+              timestamp: Date.now(),
+            });
+          }
+          // 2. Pedido saiu da cozinha
+          else if (diff.leftKitchenOrders.length > 0) {
+            soundAlert.playKitchenDoneSound();
+            const seqs = diff.leftKitchenOrders.map(o => `#${o.numeroSequencial}`).join(', ');
+            setActiveNotification({
+              id: `notif-${Date.now()}`,
+              type: 'kitchen_done',
+              title: `👨‍🍳 Pedido Pronto / Saiu da Cozinha (${seqs})`,
+              description: `Fritura finalizada! O pedido está pronto na expedição para entrega/retirada.`,
+              timestamp: Date.now(),
+            });
+          }
+          // 3. Pedido entregue pelo motoboy
+          else if (diff.deliveredOrders.length > 0) {
+            soundAlert.playDeliveredSound();
+            const seqs = diff.deliveredOrders.map(o => `#${o.numeroSequencial}`).join(', ');
+            setActiveNotification({
+              id: `notif-${Date.now()}`,
+              type: 'delivered',
+              title: `🛵 Pedido Entregue pelo Motoboy (${seqs})`,
+              description: `Entrega confirmada com sucesso! Atualizado no pipeline do Kanban.`,
+              timestamp: Date.now(),
+            });
+          }
+        }
+        // SE NÃO HOUVER MUDANÇA: Mantém a tela atual exatamente como está, sem piscar ou recarregar!
+      }
+    } catch (err) {
+      console.warn('[Monitor 15s] Erro na verificação:', err);
+    } finally {
+      setIsCheckingOrders(false);
+      setSecondsToNextCheck(15);
+    }
+  };
+
+  // Timer de 15 segundos contínuo que executa a verificação
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsToNextCheck(prev => {
+        if (prev <= 1) {
+          runOrderCheck();
+          return 15;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   // Sincronização em tempo real com Firebase Firestore com atualização de cache
   useEffect(() => {
     const unsubOrders = subscribeToOrders((cloudOrders) => {
       if (cloudOrders && cloudOrders.length > 0) {
         setOrders(cloudOrders);
+        ordersRef.current = cloudOrders;
         localCache.set('pastel_orders', cloudOrders);
       }
     }, () => setIsFirebaseConnected(false));
@@ -703,6 +798,9 @@ export default function App() {
               setSelectedTrackingOrderId(orderId);
               setCurrentView('tracker');
             }}
+            secondsRemaining={secondsToNextCheck}
+            isChecking={isCheckingOrders}
+            onForceCheck={runOrderCheck}
           />
         )}
 
@@ -710,6 +808,9 @@ export default function App() {
           <KitchenKDS
             orders={orders}
             onSetReady={(orderId) => handleUpdateOrderStatus(orderId, 'pronto')}
+            secondsRemaining={secondsToNextCheck}
+            isChecking={isCheckingOrders}
+            onForceCheck={runOrderCheck}
           />
         )}
 
@@ -753,6 +854,12 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Toast flutuante de notificação automática de novos pedidos e mudanças */}
+      <OrderAlertToast
+        notification={activeNotification}
+        onDismiss={() => setActiveNotification(null)}
+      />
     </div>
   );
 }

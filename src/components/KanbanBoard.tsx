@@ -18,6 +18,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { Order, OrderStatus, UserAccount, DriverLocation, DeliveryDriver } from '../types';
+import { OrderSyncIndicator } from './OrderSyncIndicator';
 
 interface KanbanBoardProps {
   orders: Order[];
@@ -28,6 +29,9 @@ interface KanbanBoardProps {
   onMarkAsPaid: (orderId: string) => void;
   driverLocations?: Record<string, DriverLocation>;
   onOpenTracker?: (orderId: string) => void;
+  secondsRemaining?: number;
+  isChecking?: boolean;
+  onForceCheck?: () => void;
 }
 
 const columns: { id: OrderStatus; title: string; color: string; icon: React.ComponentType<any> }[] = [
@@ -47,6 +51,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onMarkAsPaid,
   driverLocations = {},
   onOpenTracker,
+  secondsRemaining = 15,
+  isChecking = false,
+  onForceCheck = () => {},
 }) => {
   const [showPaidArchived, setShowPaidArchived] = useState(false);
   const [viewingDriverGps, setViewingDriverGps] = useState<{ driverName: string; orderId: string; loc?: DriverLocation } | null>(null);
@@ -92,13 +99,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             Pipeline de Produção (Kanban em Tempo Real)
           </h1>
           <p className="text-xs text-stone-600">
-            Controle visual com status de pagamento em destaque, cálculo de troco e rastreamento GPS de entregadores.
+            Controle visual com atualização automática a cada 15s (novos pedidos, saída da cozinha e entregas).
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs font-semibold text-stone-600 bg-white border border-stone-200 px-3 py-1.5 rounded-xl shadow-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Sincronização em Tempo Real</span>
-        </div>
+
+        {/* Indicador de checagem automática a cada 15s */}
+        <OrderSyncIndicator 
+          secondsRemaining={secondsRemaining}
+          isChecking={isChecking}
+          onForceCheck={onForceCheck}
+          variant="light"
+        />
       </div>
 
       {/* Grid Kanban */}
