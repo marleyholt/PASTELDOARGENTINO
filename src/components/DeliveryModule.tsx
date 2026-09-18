@@ -310,7 +310,7 @@ export const DeliveryModule: React.FC<DeliveryModuleProps> = ({
                     </a>
 
                     {order.enderecoEntrega && (
-                      <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs space-y-1">
+                      <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs space-y-2">
                         <div className="font-bold text-stone-900 flex items-center gap-1.5">
                           <MapPin className="w-4 h-4 text-red-500 shrink-0" />
                           <span>{order.enderecoEntrega.logradouro}, nº {order.enderecoEntrega.numero}</span>
@@ -323,6 +323,19 @@ export const DeliveryModule: React.FC<DeliveryModuleProps> = ({
                         <div className="text-stone-700 pl-5">
                           Bairro: <strong>{order.enderecoEntrega.bairro}</strong>
                         </div>
+                        
+                        {/* Botão Oficial do Google Maps para o Motoboy */}
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                            `${order.enderecoEntrega.logradouro}, ${order.enderecoEntrega.numero}, ${order.enderecoEntrega.bairro}`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 w-full flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] py-2 px-3 rounded-lg shadow-xs transition-colors"
+                        >
+                          <Navigation className="w-3.5 h-3.5" />
+                          Navegar via Google Maps (GPS)
+                        </a>
                       </div>
                     )}
                   </div>

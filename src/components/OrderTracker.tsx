@@ -50,6 +50,7 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
   // Temporizador de contagem regressiva de 60 segundos para atualização do GPS
   const [secondsToRefresh, setSecondsToRefresh] = useState(60);
   const [refreshPulse, setRefreshPulse] = useState(false);
+  const [mapViewMode, setMapViewMode] = useState<'google_maps' | 'radar_gps'>('google_maps');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -318,42 +319,110 @@ export const OrderTracker: React.FC<OrderTrackerProps> = ({
                 </div>
               </div>
 
-              {/* Simulação Visual do Mapa do Rastreamento */}
-              <div className="relative h-60 w-full bg-stone-900 rounded-2xl overflow-hidden border border-stone-200 flex items-center justify-center text-center p-4">
-                <div className="absolute inset-0 bg-[radial-gradient(#ffffff20_1px,transparent_1px)] [background-size:20px_20px]" />
-                
-                {/* Linha pontilhada de trajeto */}
-                <div className="absolute w-2/3 h-1 border-t-2 border-dashed border-amber-400/60 -rotate-6 top-1/2 left-16" />
-
-                {/* Marcador da Pastelaria */}
-                <div className="absolute left-8 top-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-bold text-xs shadow-md">
-                    🥟
-                  </div>
-                  <span className="text-[9px] font-bold text-stone-300 mt-1">Pastelaria</span>
+              {/* Abas para alternar visualização do Mapa */}
+              <div className="flex items-center justify-between gap-2 border-b border-stone-200 pb-2">
+                <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setMapViewMode('google_maps')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      mapViewMode === 'google_maps'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    🗺️ Google Maps Ao Vivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMapViewMode('radar_gps')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      mapViewMode === 'radar_gps'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                  >
+                    📡 Radar de Telemetria GPS
+                  </button>
                 </div>
 
-                {/* Marcador do Motoboy no trajeto */}
-                <div className="relative z-10 flex flex-col items-center animate-pulse">
-                  <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xl ring-4 ring-purple-400/40">
-                    <Truck className="w-6 h-6" />
-                  </div>
-                  <span className="bg-purple-900/90 text-white text-[10px] font-black px-2 py-0.5 rounded-md mt-1 shadow-sm">
-                    Motoboy em Movimento
-                  </span>
-                  <span className="text-[9px] text-purple-200 mt-0.5 font-mono">
-                    Coord: {driverLoc ? `${driverLoc.latitude.toFixed(4)}, ${driverLoc.longitude.toFixed(4)}` : '-23.5505, -46.6333'}
-                  </span>
-                </div>
-
-                {/* Marcador da Casa do Cliente */}
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
-                    🏠
-                  </div>
-                  <span className="text-[9px] font-bold text-stone-300 mt-1">Seu Endereço</span>
-                </div>
+                {/* Botão de abrir direto no App do Google Maps */}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                    selectedOrder.enderecoEntrega
+                      ? `${selectedOrder.enderecoEntrega.logradouro}, ${selectedOrder.enderecoEntrega.numero}, ${selectedOrder.enderecoEntrega.bairro}`
+                      : driverLoc ? `${driverLoc.latitude},${driverLoc.longitude}` : '-23.55052,-46.633308'
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Abrir no Google Maps App
+                </a>
               </div>
+
+              {/* Conteúdo do Mapa: Google Maps OU Radar GPS */}
+              {mapViewMode === 'google_maps' ? (
+                <div className="relative h-72 w-full bg-stone-100 rounded-2xl overflow-hidden border border-stone-300 shadow-inner">
+                  <iframe
+                    title="Google Maps Rota da Entrega"
+                    width="100%"
+                    height="100%"
+                    className="border-0"
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(
+                      selectedOrder.enderecoEntrega
+                        ? `${selectedOrder.enderecoEntrega.logradouro}, ${selectedOrder.enderecoEntrega.numero}, ${selectedOrder.enderecoEntrega.bairro}`
+                        : driverLoc ? `${driverLoc.latitude},${driverLoc.longitude}` : '-23.55052,-46.633308'
+                    )}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                  />
+                  {/* Etiqueta flutuante do Google Maps */}
+                  <div className="absolute top-2 left-2 bg-stone-900/85 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm border border-stone-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Google Maps Rota em Tempo Real
+                  </div>
+                </div>
+              ) : (
+                /* Radar GPS com telemetria */
+                <div className="relative h-64 w-full bg-stone-900 rounded-2xl overflow-hidden border border-stone-200 flex items-center justify-center text-center p-4">
+                  <div className="absolute inset-0 bg-[radial-gradient(#ffffff20_1px,transparent_1px)] [background-size:20px_20px]" />
+                  
+                  {/* Linha pontilhada de trajeto */}
+                  <div className="absolute w-2/3 h-1 border-t-2 border-dashed border-amber-400/60 -rotate-6 top-1/2 left-16" />
+
+                  {/* Marcador da Pastelaria */}
+                  <div className="absolute left-8 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center font-bold text-xs shadow-md">
+                      🥟
+                    </div>
+                    <span className="text-[9px] font-bold text-stone-300 mt-1">Pastelaria</span>
+                  </div>
+
+                  {/* Marcador do Motoboy no trajeto */}
+                  <div className="relative z-10 flex flex-col items-center animate-pulse">
+                    <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-xl ring-4 ring-purple-400/40">
+                      <Truck className="w-6 h-6" />
+                    </div>
+                    <span className="bg-purple-900/90 text-white text-[10px] font-black px-2 py-0.5 rounded-md mt-1 shadow-sm">
+                      Motoboy em Movimento
+                    </span>
+                    <span className="text-[9px] text-purple-200 mt-0.5 font-mono">
+                      Coord: {driverLoc ? `${driverLoc.latitude.toFixed(4)}, ${driverLoc.longitude.toFixed(4)}` : '-23.5505, -46.6333'}
+                    </span>
+                  </div>
+
+                  {/* Marcador da Casa do Cliente */}
+                  <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-xs shadow-md">
+                      🏠
+                    </div>
+                    <span className="text-[9px] font-bold text-stone-300 mt-1">Seu Endereço</span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-purple-50/70 p-3 rounded-xl border border-purple-200 text-purple-950">
                 <div className="flex items-center gap-2">

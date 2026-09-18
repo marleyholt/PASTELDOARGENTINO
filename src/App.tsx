@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
   ShoppingBag, 
@@ -13,7 +13,9 @@ import {
   Navigation,
   Menu,
   X,
-  Bike
+  Bike,
+  CloudCheck,
+  Cloud
 } from 'lucide-react';
 
 import { 
@@ -49,8 +51,16 @@ import { KitchenKDS } from './components/KitchenKDS';
 import { DeliveryModule } from './components/DeliveryModule';
 import { FinancialModule } from './components/FinancialModule';
 import { AdvancedReports } from './components/AdvancedReports';
-import { LaravelMigrationGuide } from './components/LaravelMigrationGuide';
 import { OrderTracker } from './components/OrderTracker';
+import { 
+  subscribeToOrders, 
+  saveOrderToFirestore, 
+  updateOrderStatusInFirestore, 
+  saveTransactionToFirestore,
+  subscribeToProducts,
+  subscribeToDrivers,
+  subscribeToTransactions
+} from './lib/firebase';
 
 type MainView = 
   | 'settings' 
@@ -60,8 +70,7 @@ type MainView =
   | 'delivery' 
   | 'tracker'
   | 'financial' 
-  | 'reports' 
-  | 'laravel_guide';
+  | 'reports';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<MainView>('settings');
@@ -91,6 +100,46 @@ export default function App() {
     }
   });
 
+  // Sincronização em tempo real com o Firebase Firestore
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Escuta em tempo real dos pedidos
+    const unsubOrders = subscribeToOrders((cloudOrders) => {
+      if (cloudOrders && cloudOrders.length > 0) {
+        setOrders(cloudOrders);
+      }
+    }, () => setIsFirebaseConnected(false));
+
+    // Escuta em tempo real do cardápio
+    const unsubProducts = subscribeToProducts((cloudProducts) => {
+      if (cloudProducts && cloudProducts.length > 0) {
+        setProducts(cloudProducts);
+      }
+    });
+
+    // Escuta dos motoboys
+    const unsubDrivers = subscribeToDrivers((cloudDrivers) => {
+      if (cloudDrivers && cloudDrivers.length > 0) {
+        setDrivers(cloudDrivers);
+      }
+    });
+
+    // Escuta do caixa financeiro
+    const unsubTrx = subscribeToTransactions((cloudTrx) => {
+      if (cloudTrx && cloudTrx.length > 0) {
+        setTransactions(cloudTrx);
+      }
+    });
+
+    return () => {
+      unsubOrders();
+      unsubProducts();
+      unsubDrivers();
+      unsubTrx();
+    };
+  }, []);
+
   // Atualização da localização de motoboys em tempo real (GPS compartilhado)
   const handleUpdateDriverLocation = (location: DriverLocation) => {
     setDriverLocations(prev => ({
@@ -119,6 +168,11 @@ export default function App() {
           data: new Date().toISOString(),
         };
         setTransactions(t => [newTrx, ...t]);
+
+        // Grava no Firebase Firestore
+        updateOrderStatusInFirestore(orderId, o.status, 'pago');
+        saveTransactionToFirestore(newTrx);
+
         return updated;
       }
       return o;
@@ -128,6 +182,9 @@ export default function App() {
   // Manipuladores de Pedidos
   const handleCreateOrder = (newOrder: Order) => {
     setOrders(prev => [newOrder, ...prev]);
+
+    // Persiste no Firebase Firestore
+    saveOrderToFirestore(newOrder);
 
     // Se já pago no Pix, cria entrada financeira
     if (newOrder.statusPagamento === 'pago') {
@@ -142,28 +199,17 @@ export default function App() {
         data: new Date().toISOString(),
       };
       setTransactions(prev => [newTrx, ...prev]);
+      saveTransactionToFirestore(newTrx);
     }
   };
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     setOrders(prev => prev.map(o => {
       if (o.id === orderId) {
+        // Ao mudar para 'entregue', o pedido muda de status mas PERMANECE com statusPagamento (ex: 'a_pagar_entrega')
+        // Ele só entra para o financeiro e vai para 'Pagos & Arquivados' quando o administrador clicar em 'Confirmar Pagamento'
         const updated = { ...o, status: newStatus, atualizadoEm: new Date().toISOString() };
-        // Se foi entregue e estava pendente de cobrança, registra a entrada no caixa
-        if (newStatus === 'entregue' && o.statusPagamento !== 'pago') {
-          updated.statusPagamento = 'pago';
-          const newTrx: FinancialTransaction = {
-            id: `trx-${Date.now()}`,
-            tipo: 'entrada',
-            categoria: 'venda_pedido',
-            descricao: `Recebimento Entrega #${o.numeroSequencial} - ${o.clienteNome}`,
-            valor: o.valorTotal,
-            formaPagamento: o.formaPagamento,
-            pedidoId: o.id,
-            data: new Date().toISOString(),
-          };
-          setTransactions(t => [newTrx, ...t]);
-        }
+        updateOrderStatusInFirestore(orderId, newStatus);
         return updated;
       }
       return o;
@@ -173,13 +219,15 @@ export default function App() {
   const handleAssignDelivery = (orderId: string, driverId: string, driverName: string) => {
     setOrders(prev => prev.map(o => {
       if (o.id === orderId) {
-        return {
+        const updated = {
           ...o,
           entregadorId: driverId,
           entregadorNome: driverName,
-          status: 'em_entrega',
+          status: 'em_entrega' as const,
           atualizadoEm: new Date().toISOString(),
         };
+        saveOrderToFirestore(updated);
+        return updated;
       }
       return o;
     }));
@@ -187,6 +235,7 @@ export default function App() {
 
   const handleAddTransaction = (newTrx: FinancialTransaction) => {
     setTransactions(prev => [newTrx, ...prev]);
+    saveTransactionToFirestore(newTrx);
   };
 
   const navItems = [
@@ -198,7 +247,6 @@ export default function App() {
     { id: 'tracker' as MainView, label: 'Rastrear Pedido (Cliente)', icon: Navigation, badgeText: 'GPS' },
     { id: 'financial' as MainView, label: 'Financeiro & Caixa', icon: DollarSign },
     { id: 'reports' as MainView, label: 'Relatórios Avançados', icon: BarChart3, badgeText: 'Gráficos' },
-    { id: 'laravel_guide' as MainView, label: 'Migração Laravel/MySQL', icon: Server, badgeText: 'Servidor' },
   ];
 
   return (
@@ -498,30 +546,7 @@ export default function App() {
             products={products}
           />
         )}
-
-        {currentView === 'laravel_guide' && (
-          <LaravelMigrationGuide />
-        )}
       </main>
-
-      {/* Rodapé Informativo */}
-      <footer className="bg-stone-900 border-t border-stone-800 text-stone-400 text-xs py-4 px-4 text-center">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            🥟 <strong>Pastelaria Gestão & Pedidos</strong> • Sistema Integrado com WhatsApp, Kanban, KDS & Finanças
-          </span>
-          <div className="flex items-center gap-4 text-stone-500">
-            <span>Fase 1: Prototipagem Rápida</span>
-            <span>•</span>
-            <button 
-              onClick={() => setCurrentView('laravel_guide')}
-              className="text-amber-400 hover:underline font-bold"
-            >
-              Ver Arquivos da Fase 2 (Laravel/MySQL)
-            </button>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

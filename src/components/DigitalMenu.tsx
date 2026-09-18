@@ -58,6 +58,7 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
   const [orderNotes, setOrderNotes] = useState('');
   const [orderFinished, setOrderFinished] = useState<Order | null>(null);
   const [copiedPix, setCopiedPix] = useState(false);
+  const [addedToast, setAddedToast] = useState<string | null>(null);
 
   const activeCategories = categories.filter(c => c.ativo);
   const activeProducts = products.filter(p => p.ativo && (selectedCategory === 'all' || p.categoriaId === selectedCategory));
@@ -95,9 +96,18 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
       subtotal: subtotal,
     };
 
+    const productName = customizingProduct.nome;
+    const qty = itemQuantity;
+
     setCart([...cart, newItem]);
+    // Fecha o modal do pastel e PERMANECE no cardápio para o cliente escolher mais itens
     setCustomizingProduct(null);
-    setIsCartOpen(true);
+
+    // Feedback visual amigável confirmando adição
+    setAddedToast(`✓ ${qty}x "${productName}" adicionado à sacola! Escolha mais itens ou clique em "Ver Pedido".`);
+    setTimeout(() => {
+      setAddedToast(null);
+    }, 4000);
   };
 
   const removeFromCart = (index: number) => {
@@ -221,7 +231,23 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
   };
 
   return (
-    <div id="digital-menu-container" className="max-w-4xl mx-auto px-4 py-6">
+    <div id="digital-menu-container" className="max-w-4xl mx-auto px-4 py-6 relative">
+      {/* Toast flutuante de item adicionado */}
+      {addedToast && (
+        <div className="fixed top-4 left-4 right-4 max-w-md mx-auto z-50 animate-fade-in">
+          <div className="bg-stone-900 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between text-xs font-bold border border-amber-500/50">
+            <span className="text-amber-300">{addedToast}</span>
+            <button
+              type="button"
+              onClick={() => setAddedToast(null)}
+              className="ml-2 text-stone-400 hover:text-white p-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Banner / Cabeçalho da Pastelaria */}
       <div className="bg-gradient-to-r from-amber-600 to-amber-700 rounded-2xl p-6 text-white mb-6 shadow-md">
         <div className="flex flex-col sm:flex-row items-center gap-4">

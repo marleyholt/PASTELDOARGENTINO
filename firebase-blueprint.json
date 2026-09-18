@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "Pedido": {
+      "title": "Pedido",
+      "description": "Pedido de delivery ou balcão na pastelaria",
+      "type": "object",
+      "properties": {
+        "numeroSequencial": { "type": "number", "description": "Número do pedido do dia" },
+        "clienteNome": { "type": "string", "description": "Nome do cliente" },
+        "clienteTelefone": { "type": "string", "description": "Telefone ou WhatsApp do cliente" },
+        "tipoEntrega": { "type": "string", "enum": ["delivery", "balcao"] },
+        "status": { "type": "string", "enum": ["novo", "preparando", "pronto", "em_entrega", "entregue", "cancelado"] },
+        "formaPagamento": { "type": "string", "enum": ["pix", "cartao_credito", "cartao_debito", "dinheiro"] },
+        "statusPagamento": { "type": "string", "enum": ["pendente", "a_pagar_entrega", "pago"] },
+        "subtotal": { "type": "number" },
+        "taxaEntrega": { "type": "number" },
+        "valorTotal": { "type": "number" },
+        "entregadorId": { "type": "string" },
+        "observacoes": { "type": "string" },
+        "criadoEm": { "type": "string" },
+        "atualizadoEm": { "type": "string" }
+      },
+      "required": ["numeroSequencial", "clienteNome", "clienteTelefone", "tipoEntrega", "status", "formaPagamento", "subtotal", "valorTotal"]
+    },
+    "Produto": {
+      "title": "Produto",
+      "description": "Item do cardápio (pastel, bebida, adicional)",
+      "type": "object",
+      "properties": {
+        "categoriaId": { "type": "string" },
+        "nome": { "type": "string" },
+        "descricao": { "type": "string" },
+        "preco": { "type": "number" },
+        "imagem": { "type": "string" },
+        "ativo": { "type": "boolean" },
+        "destaque": { "type": "boolean" }
+      },
+      "required": ["categoriaId", "nome", "preco", "ativo"]
+    },
+    "Categoria": {
+      "title": "Categoria",
+      "description": "Categoria do cardápio",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "descricao": { "type": "string" },
+        "ativo": { "type": "boolean" },
+        "ordem": { "type": "number" }
+      },
+      "required": ["nome", "ativo"]
+    },
+    "Entregador": {
+      "title": "Entregador",
+      "description": "Motoboy ou entregador parceiro",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "telefone": { "type": "string" },
+        "veiculo": { "type": "string" },
+        "placa": { "type": "string" },
+        "chavePix": { "type": "string" },
+        "tipoChavePix": { "type": "string" },
+        "taxaFixa": { "type": "number" },
+        "emServico": { "type": "boolean" },
+        "ativo": { "type": "boolean" }
+      },
+      "required": ["nome", "telefone", "veiculo", "ativo"]
+    },
+    "TransacaoFinanceira": {
+      "title": "TransacaoFinanceira",
+      "description": "Lançamento no caixa da pastelaria",
+      "type": "object",
+      "properties": {
+        "tipo": { "type": "string", "enum": ["entrada", "saida"] },
+        "categoria": { "type": "string" },
+        "descricao": { "type": "string" },
+        "valor": { "type": "number" },
+        "formaPagamento": { "type": "string" },
+        "pedidoId": { "type": "string" },
+        "data": { "type": "string" }
+      },
+      "required": ["tipo", "categoria", "descricao", "valor", "data"]
+    }
+  },
+  "firestore": {
+    "/pedidos/{pedidoId}": {
+      "schema": "Pedido",
+      "description": "Coleção de pedidos em andamento e concluídos"
+    },
+    "/produtos/{produtoId}": {
+      "schema": "Produto",
+      "description": "Itens cadastrados no cardápio"
+    },
+    "/categorias/{categoriaId}": {
+      "schema": "Categoria",
+      "description": "Categorias de produtos"
+    },
+    "/entregadores/{entregadorId}": {
+      "schema": "Entregador",
+      "description": "Cadastro e controle de motoboys"
+    },
+    "/transacoes_financeiras/{transacaoId}": {
+      "schema": "TransacaoFinanceira",
+      "description": "Movimentações de caixa financeiro"
+    }
+  }
+}
