@@ -72,7 +72,8 @@ import {
   subscribeToTransactions,
   fetchOrdersDirectly,
   subscribeToStoreConfig,
-  saveStoreConfigToFirestore
+  saveStoreConfigToFirestore,
+  auth
 } from './lib/firebase';
 
 import { localCache } from './lib/cache';
@@ -329,6 +330,7 @@ export default function App() {
     setCurrentSession(null);
     localCache.remove('pastel_session');
     setIsNavDrawerOpen(false);
+    auth.signOut().catch(() => {});
   };
 
   // Atualização de localização GPS dos entregadores

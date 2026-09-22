@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShoppingBag, 
   Plus, 
@@ -70,6 +70,17 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
   const activeCategories = categories.filter(c => c.ativo);
   // Itens pausados (esgotados) são retirados temporariamente do cardápio do cliente
   const activeProducts = products.filter(p => p.ativo && !p.pausado && (selectedCategory === 'all' || p.categoriaId === selectedCategory));
+
+  // Fechar modal de loja fechada com tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showStoreClosedModal) {
+        setShowStoreClosedModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showStoreClosedModal]);
 
   const openCustomizer = (product: Product) => {
     if (product.pausado) return;
@@ -972,95 +983,103 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
       {showStoreClosedModal && (
         <div 
           id="modal-loja-fechada-desculpas" 
-          className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowStoreClosedModal(false);
+          }}
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
         >
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border border-stone-200 relative">
+          <div className="bg-white rounded-3xl max-w-sm sm:max-w-md w-full p-4 sm:p-5 text-center space-y-3 shadow-2xl border border-stone-200 relative max-h-[85vh] overflow-y-auto overscroll-contain text-stone-800 m-auto">
+            {/* Botão Fechar no Topo */}
             <button
               type="button"
               onClick={() => setShowStoreClosedModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              className="absolute top-3.5 right-3.5 p-2 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors cursor-pointer"
+              title="Fechar (Esc)"
+              aria-label="Fechar janela"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
-              <Store className="w-8 h-8" />
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <Store className="w-6 h-6" />
             </div>
 
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 inline-block mb-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 inline-block mb-1">
                 Fora do Horário de Atendimento
               </span>
-              <h3 className="text-xl font-black text-stone-900 leading-snug">
+              <h3 className="text-lg sm:text-xl font-black text-stone-900 leading-snug">
                 Pedimos desculpas, a loja está fechada agora!
               </h3>
-              <p className="text-xs text-stone-600 mt-1.5 leading-relaxed">
-                No momento não estamos aceitando novos pedidos pelo cardápio digital. Confira abaixo os nossos horários de funcionamento para planejar o seu pedido!
+              <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                No momento não estamos aceitando novos pedidos pelo cardápio digital. Confira abaixo os nossos horários cadastrados para planejar seu pedido:
               </p>
             </div>
 
             {/* Quadro com os Horários Configurados da Loja */}
-            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-left space-y-3">
+            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-3 sm:p-4 text-left space-y-2.5">
               <div className="flex items-center gap-2 text-xs font-black text-stone-900 uppercase tracking-wide">
                 <Clock className="w-4 h-4 text-amber-600" />
-                <span>Horários de Atendimento Configurados</span>
+                <span>Horários de Atendimento</span>
               </div>
 
               {/* Horário Principal Cadastrado no Sistema */}
-              <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/80 shadow-2xs">
+              <div className="p-2.5 bg-amber-50/90 rounded-xl border border-amber-200/80 shadow-2xs">
                 <span className="text-[10px] uppercase font-bold text-amber-900 tracking-wider block">
-                  Horário Oficial de Atendimento:
+                  Horário Oficial Cadastrado:
                 </span>
-                <p className="text-sm font-black text-amber-950 mt-0.5 font-mono">
+                <p className="text-xs sm:text-sm font-black text-amber-950 mt-0.5 font-mono">
                   {config.horarioFuncionamento || 'Terça a Domingo: 17:00 às 23:30'}
                 </p>
               </div>
 
               {/* Lista detalhada por turnos e dias da semana */}
-              <div className="space-y-1.5 text-xs text-stone-700">
-                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+              <div className="space-y-1 text-xs text-stone-700">
+                <div className="flex items-center justify-between py-1 border-b border-stone-200/80">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                    <span className="font-semibold">Segunda-feira:</span>
+                    <span className="font-semibold text-[11px] sm:text-xs">Segunda-feira:</span>
                   </div>
-                  <span className="text-rose-600 font-black text-[11px] bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
-                    Fechado (Folga Geral)
+                  <span className="text-rose-600 font-black text-[10px] sm:text-[11px] bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                    Fechado
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+                <div className="flex items-center justify-between py-1 border-b border-stone-200/80">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                    <span className="font-semibold">Terça a Sexta-feira:</span>
+                    <span className="font-semibold text-[11px] sm:text-xs">Terça a Sexta:</span>
                   </div>
-                  <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                  <span className="text-emerald-700 font-black text-[10px] sm:text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
                     17:00 às 23:30
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+                <div className="flex items-center justify-between py-1 border-b border-stone-200/80">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                    <span className="font-semibold">Sábado e Domingo:</span>
+                    <span className="font-semibold text-[11px] sm:text-xs">Sábado e Domingo:</span>
                   </div>
-                  <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                  <span className="text-emerald-700 font-black text-[10px] sm:text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
                     17:00 às 00:00
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5">
+                <div className="flex items-center justify-between py-1">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                    <span className="font-semibold">Feriados:</span>
+                    <span className="font-semibold text-[11px] sm:text-xs">Feriados:</span>
                   </div>
-                  <span className="text-amber-800 font-black text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-mono">
+                  <span className="text-amber-800 font-black text-[10px] sm:text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-mono">
                     17:00 às 23:30
                   </span>
                 </div>
               </div>
 
               {config.enderecoCompleto && (
-                <div className="pt-2 border-t border-stone-200 text-[11px] text-stone-500 flex items-center gap-1.5">
+                <div className="pt-2 border-t border-stone-200 text-[10px] sm:text-[11px] text-stone-500 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                   <span className="truncate">{config.enderecoCompleto}</span>
                 </div>
@@ -1073,7 +1092,7 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
                   href={`https://wa.me/${config.whatsappOficial}?text=${encodeURIComponent('Olá! Vi que a loja está fechada no momento, gostaria de tirar uma dúvida sobre os horários e cardápio.')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-xs shadow-md flex items-center justify-center gap-2 transition-transform active:scale-98"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-black text-xs shadow-md flex items-center justify-center gap-2 transition-transform active:scale-98"
                 >
                   <MessageCircle className="w-4 h-4" />
                   Dúvidas? Fale Conosco no WhatsApp
@@ -1083,7 +1102,7 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
               <button
                 type="button"
                 onClick={() => setShowStoreClosedModal(false)}
-                className="w-full py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs transition-colors"
+                className="w-full py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs transition-colors cursor-pointer"
               >
                 Continuar Vendo o Cardápio
               </button>

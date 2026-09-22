@@ -114,7 +114,7 @@ export const AccessPortal: React.FC<AccessPortalProps> = ({
     onSelectProfile({ perfil: 'cozinha', nome: 'Equipe da Cozinha' }, 'kitchen');
   };
 
-  // Manipulador de login com Google OAuth para o Administrador
+  // Manipulador de login com Google OAuth para o Administrador (Exclusivo)
   const handleGoogleAdminLogin = async () => {
     setAdminLoading(true);
     setAdminError(null);
@@ -131,25 +131,15 @@ export const AccessPortal: React.FC<AccessPortalProps> = ({
         nome: user.displayName || 'Administrador',
       }, 'kanban');
     } catch (err: any) {
-      console.warn('[Google OAuth] Erro ou popup fechado:', err?.message);
-      // Se popup estiver bloqueado no iframe, orienta o usuário e oferece acesso direto
+      console.warn('[Google OAuth] Erro na autenticação:', err?.message);
       if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/cancelled-popup-request') {
-        setAdminError('O navegador bloqueou a janela pop-up do Google. Você pode liberar pop-ups ou clicar em "Entrar Direto como Administrador" abaixo para testar.');
+        setAdminError('O navegador bloqueou a janela pop-up do Google. Por favor, habilite pop-ups para este site nas configurações do navegador e tente novamente.');
       } else {
-        setAdminError(`Tentativa com Google: ${err?.message || 'Login cancelado'}. Use o botão de acesso direto para continuar.`);
+        setAdminError(`Erro ao autenticar com o Google: ${err?.message || 'Login não concluído'}. Tente novamente.`);
       }
     } finally {
       setAdminLoading(false);
     }
-  };
-
-  // Entrada direta administrativa (garante acesso mesmo se o Google OAuth for bloqueado pelo iframe da pré-visualização)
-  const handleBypassAdminLogin = () => {
-    onSelectProfile({
-      perfil: 'admin',
-      adminEmail: 'admin@pasteldeouro.com.br',
-      nome: 'Administrador Master',
-    }, 'kanban');
   };
 
   return (
@@ -655,15 +645,12 @@ export const AccessPortal: React.FC<AccessPortalProps> = ({
                 </div>
               )}
 
-              {/* Botão de Contingência Direta (Caso popups estejam bloqueados no ambiente de teste) */}
-              <div className="border-t border-stone-800 pt-3">
-                <button
-                  type="button"
-                  onClick={handleBypassAdminLogin}
-                  className="w-full text-center text-xs text-stone-400 hover:text-amber-400 font-semibold py-2 transition-colors"
-                >
-                  ⚡ Entrar direto como Administrador (Modo Desenvolvimento)
-                </button>
+              {/* Nota de Segurança: Acesso Exclusivo via Google */}
+              <div className="border-t border-stone-800 pt-3 text-center">
+                <p className="text-[11px] text-stone-400 flex items-center justify-center gap-1.5 font-medium">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>Ambiente Seguro: autenticação restrita via Google OAuth</span>
+                </p>
               </div>
             </div>
           </div>
