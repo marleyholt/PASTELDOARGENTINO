@@ -70,7 +70,9 @@ import {
   subscribeToProducts, 
   subscribeToDrivers, 
   subscribeToTransactions,
-  fetchOrdersDirectly
+  fetchOrdersDirectly,
+  subscribeToStoreConfig,
+  saveStoreConfigToFirestore
 } from './lib/firebase';
 
 import { localCache } from './lib/cache';
@@ -274,13 +276,36 @@ export default function App() {
       }
     });
 
+    const unsubConfig = subscribeToStoreConfig((cloudConfig) => {
+      if (cloudConfig && cloudConfig.nome) {
+        setConfig(cloudConfig);
+        localCache.set('pastel_config', cloudConfig);
+      }
+    });
+
     return () => {
       unsubOrders();
       unsubProducts();
       unsubDrivers();
       unsubTrx();
+      unsubConfig();
     };
   }, []);
+
+  // Alternar status da loja (aberta/fechada fora do horário)
+  const handleToggleStoreOpen = async (isOpen: boolean) => {
+    const updated: StoreConfig = {
+      ...config,
+      lojaAberta: isOpen,
+    };
+    setConfig(updated);
+    localCache.set('pastel_config', updated);
+    try {
+      await saveStoreConfigToFirestore(updated);
+    } catch (err) {
+      console.warn('Erro ao salvar status de abertura da loja:', err);
+    }
+  };
 
   // Ao selecionar um perfil no Portal de Acesso
   const handleSelectProfile = (session: UserSession) => {
@@ -928,6 +953,8 @@ export default function App() {
             secondsRemaining={secondsToNextCheck}
             isChecking={isCheckingOrders}
             onForceCheck={runOrderCheck}
+            config={config}
+            onToggleStoreOpen={handleToggleStoreOpen}
           />
         )}
 

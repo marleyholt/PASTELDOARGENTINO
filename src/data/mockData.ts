@@ -34,6 +34,7 @@ Aguarde a confirmação da pastelaria!`,
   permiteRetirada: true,
   permiteEntrega: true,
   senhaCozinha: "1234",
+  lojaAberta: true,
 };
 
 export const initialCategories: Category[] = [

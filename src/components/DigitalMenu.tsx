@@ -12,7 +12,10 @@ import {
   Copy,
   AlertCircle,
   MessageCircle,
-  Navigation
+  Navigation,
+  Store,
+  Lock,
+  Calendar
 } from 'lucide-react';
 import { Product, Category, ProductExtra, DeliveryZone, StoreConfig, Order, OrderItem, PaymentMethod } from '../types';
 
@@ -38,6 +41,10 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showStoreClosedModal, setShowStoreClosedModal] = useState(false);
+
+  // Status da loja (default: aberta)
+  const isStoreOpen = config.lojaAberta !== false;
 
   // Modal de Personalização do Pastel
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
@@ -66,6 +73,10 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
 
   const openCustomizer = (product: Product) => {
     if (product.pausado) return;
+    if (!isStoreOpen) {
+      setShowStoreClosedModal(true);
+      return;
+    }
     setCustomizingProduct(product);
     setSelectedExtras([]);
     setItemNote('');
@@ -129,6 +140,10 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
 
   const handleFinishOrder = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isStoreOpen) {
+      setShowStoreClosedModal(true);
+      return;
+    }
     if (cart.length === 0) return;
     if (!customerName.trim() || !customerPhone.trim()) {
       alert('Por favor, informe seu Nome e Telefone/WhatsApp.');
@@ -268,13 +283,71 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
               <span className="bg-amber-900/40 text-amber-200 text-[11px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
                 <Clock className="w-3 h-3" /> {config.horarioFuncionamento}
               </span>
-              <span className="bg-emerald-500/30 text-emerald-100 text-[11px] px-2.5 py-0.5 rounded-full font-medium">
-                🥟 Pastel Feito na Hora
-              </span>
+              {isStoreOpen ? (
+                <span className="bg-emerald-500/30 text-emerald-100 text-[11px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  🥟 Loja Aberta
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowStoreClosedModal(true)}
+                  className="bg-rose-500 text-white text-[11px] px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1 hover:bg-rose-400 cursor-pointer shadow-xs animate-pulse"
+                >
+                  <Lock className="w-3 h-3" /> Loja Fechada Agora
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Banner de Loja Fechada com Mensagem de Desculpas e Horários */}
+      {!isStoreOpen && (
+        <div id="banner-loja-fechada-cliente" className="mb-6 bg-gradient-to-r from-stone-900 via-rose-950 to-stone-900 border-2 border-rose-500/70 rounded-2xl p-5 text-white shadow-xl animate-fade-in">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-600/30 border border-rose-500/50 flex items-center justify-center shrink-0 text-rose-300">
+                <Store className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider">
+                    Loja Fechada no Momento
+                  </span>
+                </div>
+                <h2 className="text-lg font-black text-white mt-1">
+                  Pedimos desculpas, a loja está fechada agora.
+                </h2>
+                <p className="text-xs text-stone-300 mt-1 leading-relaxed">
+                  No momento não estamos aceitando novos pedidos fora do nosso horário de atendimento.
+                  Por favor, confira nossos horários de funcionamento abaixo para planejar o seu pedido!
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowStoreClosedModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-all shadow-md shrink-0 flex items-center gap-2 active:scale-95"
+            >
+              <Clock className="w-4 h-4 text-stone-950" />
+              <span>Ver Horários de Atendimento</span>
+            </button>
+          </div>
+
+          {/* Horários cadastrados em destaque */}
+          <div className="mt-4 pt-3 border-t border-rose-500/30 flex flex-wrap items-center gap-3 text-xs text-rose-200">
+            <div className="flex items-center gap-1.5 font-bold">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Horário Cadastrado:</span>
+            </div>
+            <span className="bg-stone-950/70 px-3 py-1 rounded-lg border border-rose-500/40 font-mono font-bold text-amber-300">
+              {config.horarioFuncionamento || 'Terça a Domingo: 17:00 às 23:30'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Barra de Categorias */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
@@ -338,9 +411,15 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
                 <span className="font-black text-amber-950 text-base font-mono">
                   R$ {prod.preco.toFixed(2)}
                 </span>
-                <span className="text-xs bg-amber-500 hover:bg-amber-600 text-stone-950 font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-xs transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Adicionar
-                </span>
+                {isStoreOpen ? (
+                  <span className="text-xs bg-amber-500 hover:bg-amber-600 text-stone-950 font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-xs transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Adicionar
+                  </span>
+                ) : (
+                  <span className="text-xs bg-rose-100 text-rose-700 font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-xs">
+                    <Lock className="w-3.5 h-3.5" /> Fechado
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -784,14 +863,25 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
               </div>
 
               {/* Botão de Finalizar */}
-              <button
-                id="btn-submit-order"
-                type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
-              >
-                <Check className="w-5 h-5" />
-                Confirmar Pedido & Enviar para Cozinha
-              </button>
+              {isStoreOpen ? (
+                <button
+                  id="btn-submit-order"
+                  type="submit"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
+                >
+                  <Check className="w-5 h-5" />
+                  Confirmar Pedido & Enviar para Cozinha
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowStoreClosedModal(true)}
+                  className="w-full bg-rose-600 hover:bg-rose-700 text-white py-3.5 rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-98"
+                >
+                  <Lock className="w-5 h-5" />
+                  Loja Fechada no Momento - Não Aceita Pedidos
+                </button>
+              )}
             </form>
           </div>
         </div>
@@ -874,6 +964,130 @@ export const DigitalMenu: React.FC<DigitalMenuProps> = ({
             >
               Fechar e Voltar ao Cardápio
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Desculpas e Horários de Funcionamento (Loja Fechada) */}
+      {showStoreClosedModal && (
+        <div 
+          id="modal-loja-fechada-desculpas" 
+          className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border border-stone-200 relative">
+            <button
+              type="button"
+              onClick={() => setShowStoreClosedModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <Store className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 inline-block mb-1.5">
+                Fora do Horário de Atendimento
+              </span>
+              <h3 className="text-xl font-black text-stone-900 leading-snug">
+                Pedimos desculpas, a loja está fechada agora!
+              </h3>
+              <p className="text-xs text-stone-600 mt-1.5 leading-relaxed">
+                No momento não estamos aceitando novos pedidos pelo cardápio digital. Confira abaixo os nossos horários de funcionamento para planejar o seu pedido!
+              </p>
+            </div>
+
+            {/* Quadro com os Horários Configurados da Loja */}
+            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-left space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black text-stone-900 uppercase tracking-wide">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>Horários de Atendimento Configurados</span>
+              </div>
+
+              {/* Horário Principal Cadastrado no Sistema */}
+              <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-amber-900 tracking-wider block">
+                  Horário Oficial de Atendimento:
+                </span>
+                <p className="text-sm font-black text-amber-950 mt-0.5 font-mono">
+                  {config.horarioFuncionamento || 'Terça a Domingo: 17:00 às 23:30'}
+                </p>
+              </div>
+
+              {/* Lista detalhada por turnos e dias da semana */}
+              <div className="space-y-1.5 text-xs text-stone-700">
+                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="font-semibold">Segunda-feira:</span>
+                  </div>
+                  <span className="text-rose-600 font-black text-[11px] bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                    Fechado (Folga Geral)
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="font-semibold">Terça a Sexta-feira:</span>
+                  </div>
+                  <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                    17:00 às 23:30
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5 border-b border-stone-200/80">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="font-semibold">Sábado e Domingo:</span>
+                  </div>
+                  <span className="text-emerald-700 font-black text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                    17:00 às 00:00
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                    <span className="font-semibold">Feriados:</span>
+                  </div>
+                  <span className="text-amber-800 font-black text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-mono">
+                    17:00 às 23:30
+                  </span>
+                </div>
+              </div>
+
+              {config.enderecoCompleto && (
+                <div className="pt-2 border-t border-stone-200 text-[11px] text-stone-500 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  <span className="truncate">{config.enderecoCompleto}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-1">
+              {config.whatsappOficial && (
+                <a
+                  href={`https://wa.me/${config.whatsappOficial}?text=${encodeURIComponent('Olá! Vi que a loja está fechada no momento, gostaria de tirar uma dúvida sobre os horários e cardápio.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black text-xs shadow-md flex items-center justify-center gap-2 transition-transform active:scale-98"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Dúvidas? Fale Conosco no WhatsApp
+                </a>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setShowStoreClosedModal(false)}
+                className="w-full py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs transition-colors"
+              >
+                Continuar Vendo o Cardápio
+              </button>
+            </div>
           </div>
         </div>
       )}

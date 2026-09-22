@@ -12,7 +12,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import type { Order, Product, Category, Driver, FinancialTransaction, OrderStatus } from '../types';
+import type { Order, Product, Category, Driver, FinancialTransaction, OrderStatus, StoreConfig } from '../types';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
 const firebaseConfig = {
@@ -211,3 +211,28 @@ export async function saveTransactionToFirestore(transaction: FinancialTransacti
     console.error('[Firebase] Erro ao salvar transação:', err);
   }
 }
+
+// 5. Sincronização da Configuração da Loja (incluindo Status Aberta/Fechada)
+export function subscribeToStoreConfig(
+  onUpdate: (config: StoreConfig) => void
+) {
+  return onSnapshot(
+    doc(db, 'configuracoes', 'geral'),
+    (snapshot) => {
+      if (snapshot.exists()) {
+        onUpdate(snapshot.data() as StoreConfig);
+      }
+    },
+    (err) => console.warn('[Firebase] Erro ao sincronizar configurações:', err)
+  );
+}
+
+export async function saveStoreConfigToFirestore(config: StoreConfig): Promise<void> {
+  try {
+    const docRef = doc(db, 'configuracoes', 'geral');
+    await setDoc(docRef, config, { merge: true });
+  } catch (err) {
+    console.error('[Firebase] Erro ao salvar configuração da loja:', err);
+  }
+}
+

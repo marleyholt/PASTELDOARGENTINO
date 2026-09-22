@@ -92,6 +92,8 @@ export interface StoreConfig {
   webhookWhatsappUrl?: string;
   webhookWhatsappToken?: string;
   webhookWhatsappAtivo?: boolean;
+  lojaAberta?: boolean; // Controle manual para abrir / fechar a loja (default: true)
+  mensagemFechamentoPersonalizada?: string;
 }
 
 export type OrderStatus = 

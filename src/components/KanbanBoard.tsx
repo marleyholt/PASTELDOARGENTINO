@@ -15,9 +15,12 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Lock,
+  Store,
+  X
 } from 'lucide-react';
-import { Order, OrderStatus, UserAccount, DriverLocation, DeliveryDriver } from '../types';
+import { Order, OrderStatus, UserAccount, DriverLocation, DeliveryDriver, StoreConfig } from '../types';
 import { OrderSyncIndicator } from './OrderSyncIndicator';
 
 interface KanbanBoardProps {
@@ -32,6 +35,8 @@ interface KanbanBoardProps {
   secondsRemaining?: number;
   isChecking?: boolean;
   onForceCheck?: () => void;
+  config?: StoreConfig;
+  onToggleStoreOpen?: (isOpen: boolean) => void;
 }
 
 const columns: { id: OrderStatus; title: string; color: string; icon: React.ComponentType<any> }[] = [
@@ -54,9 +59,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   secondsRemaining = 15,
   isChecking = false,
   onForceCheck = () => {},
+  config,
+  onToggleStoreOpen,
 }) => {
   const [showPaidArchived, setShowPaidArchived] = useState(false);
   const [viewingDriverGps, setViewingDriverGps] = useState<{ driverName: string; orderId: string; loc?: DriverLocation } | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+
+  // Status da loja (default: true / aberta)
+  const isStoreOpen = config?.lojaAberta !== false;
 
   // Lista unificada de motoboys cadastrados
   const drivers = deliveryDrivers.length > 0 
@@ -93,7 +104,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2">
             Pipeline de Produção (Kanban em Tempo Real)
@@ -103,14 +114,94 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </p>
         </div>
 
-        {/* Indicador de checagem automática a cada 15s */}
-        <OrderSyncIndicator 
-          secondsRemaining={secondsRemaining}
-          isChecking={isChecking}
-          onForceCheck={onForceCheck}
-          variant="light"
-        />
+        {/* Controles do Topo: Botão Abrir/Fechar Loja e Indicador 15s */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Botão de Controle de Loja Aberta/Fechada (Fora do Horário) */}
+          {onToggleStoreOpen && (
+            <div className={`flex items-center gap-2.5 px-3 py-1.5 rounded-2xl border shadow-xs transition-all ${
+              isStoreOpen 
+                ? 'bg-emerald-50/80 border-emerald-300' 
+                : 'bg-rose-50 border-rose-300 ring-2 ring-rose-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isStoreOpen ? 'bg-emerald-500 animate-pulse' : 'bg-rose-600'}`} />
+                <div className="text-left">
+                  <span className="text-xs font-black text-stone-900 block leading-none">
+                    {isStoreOpen ? 'Loja Aberta' : 'Loja Fechada'}
+                  </span>
+                  <span className="text-[10px] text-stone-500 hidden sm:block">
+                    {isStoreOpen ? 'Recebendo novos pedidos' : 'Pedidos bloqueados no cardápio'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-6 w-px bg-stone-300/80 mx-1" />
+
+              {isStoreOpen ? (
+                <button
+                  id="btn-kanban-fechar-loja"
+                  type="button"
+                  onClick={() => setShowCloseModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition-all shadow-xs active:scale-95"
+                  title="Fechar a loja temporariamente fora do horário normal"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Fechar Loja</span>
+                </button>
+              ) : (
+                <button
+                  id="btn-kanban-abrir-loja"
+                  type="button"
+                  onClick={() => onToggleStoreOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-xs active:scale-95 animate-pulse"
+                  title="Reabrir a loja e voltar a aceitar pedidos no cardápio"
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  <span>Abrir Loja Agora</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Indicador de checagem automática a cada 15s */}
+          <OrderSyncIndicator 
+            secondsRemaining={secondsRemaining}
+            isChecking={isChecking}
+            onForceCheck={onForceCheck}
+            variant="light"
+          />
+        </div>
       </div>
+
+      {/* Banner de Aviso no Kanban quando a Loja estiver Fechada */}
+      {!isStoreOpen && (
+        <div id="banner-alerta-loja-fechada-kanban" className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-700 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+              <Lock className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black tracking-tight">
+                Atenção: A Loja está Fechada no Momento!
+              </h3>
+              <p className="text-xs text-rose-100">
+                Novos pedidos foram bloqueados no cardápio digital do cliente. Os clientes estão vendo uma mensagem de desculpas com o horário cadastrado: <strong>{config?.horarioFuncionamento || 'Horário de atendimento padrão'}</strong>.
+              </p>
+            </div>
+          </div>
+
+          {onToggleStoreOpen && (
+            <button
+              type="button"
+              onClick={() => onToggleStoreOpen(true)}
+              className="px-4 py-2 bg-white hover:bg-rose-50 text-rose-700 text-xs font-black rounded-xl shadow-xs transition-all shrink-0 flex items-center gap-1.5"
+            >
+              <Store className="w-3.5 h-3.5 text-rose-600" />
+              Reabrir Loja Agora
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Grid Kanban */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
@@ -255,6 +346,65 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 className="bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold px-4 py-2 rounded-xl"
               >
                 Fechar Painel GPS
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação para Fechar a Loja Fora de Horário */}
+      {showCloseModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="w-7 h-7" />
+            </div>
+
+            <div className="text-center">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 inline-block mb-1.5">
+                Controle Manual da Loja
+              </span>
+              <h3 className="text-xl font-black text-stone-900">
+                Deseja fechar a loja agora?
+              </h3>
+              <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                Essa ação fecha a loja temporariamente, impedindo que novos pedidos sejam feitos no cardápio digital fora do expediente planejado.
+              </p>
+            </div>
+
+            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-xs text-stone-700 space-y-2.5">
+              <div className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-rose-100 text-rose-700 font-black flex items-center justify-center text-[10px] shrink-0 mt-0.5">✕</span>
+                <span>O cardápio digital <strong>bloqueará novos pedidos</strong> imediatamente.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center text-[10px] shrink-0 mt-0.5">!</span>
+                <span>Os clientes verão uma <strong>mensagem de desculpas</strong> informando que a loja está fechada.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-800 font-black flex items-center justify-center text-[10px] shrink-0 mt-0.5">🕒</span>
+                <span>Será exibida a sua lista com os <strong>horários de atendimento cadastrados</strong>: <strong className="text-stone-900">{config?.horarioFuncionamento || 'Terça a Domingo: 17:00 às 23:30'}</strong>.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCloseModal(false)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 font-bold text-xs transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleStoreOpen?.(false);
+                  setShowCloseModal(false);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Sim, Fechar Loja
               </button>
             </div>
           </div>
